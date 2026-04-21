@@ -1,0 +1,7 @@
+package org.jeecg.modules.redbook.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.jeecg.modules.redbook.entity.RbTrack;
+
+public interface RbTrackMapper extends BaseMapper<RbTrack> {
+}

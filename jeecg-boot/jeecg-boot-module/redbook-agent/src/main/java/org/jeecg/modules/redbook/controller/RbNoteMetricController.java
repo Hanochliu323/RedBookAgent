@@ -8,8 +8,16 @@ import org.jeecg.common.api.vo.Result;
 import org.jeecg.common.aspect.annotation.AutoLog;
 import org.jeecg.modules.redbook.entity.RbNoteMetric;
 import org.jeecg.modules.redbook.service.IRbNoteMetricService;
+import org.jeecgframework.poi.excel.ExcelImportUtil;
+import org.jeecgframework.poi.excel.entity.ImportParams;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.web.servlet.ModelAndView;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Tag(name = "RedBook数据回收")
 @RestController
@@ -56,6 +64,29 @@ public class RbNoteMetricController extends RedbookCrudController<RbNoteMetric, 
 
     @PostMapping(value = "/importExcel")
     public Result<?> importExcel(HttpServletRequest request, HttpServletResponse response) {
-        return importExcelData(request, response, RbNoteMetric.class);
+        MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
+        Map<String, MultipartFile> fileMap = multipartRequest.getFileMap();
+        if (fileMap.isEmpty()) {
+            return Result.error("文件导入失败:未上传文件");
+        }
+        int total = 0;
+        for (Map.Entry<String, MultipartFile> entry : fileMap.entrySet()) {
+            MultipartFile file = entry.getValue();
+            ImportParams params = new ImportParams();
+            params.setTitleRows(2);
+            params.setHeadRows(1);
+            params.setNeedSave(true);
+            try {
+                List<RbNoteMetric> metrics = ExcelImportUtil.importExcel(file.getInputStream(), RbNoteMetric.class, params);
+                List<RbNoteMetric> normalizedMetrics = metrics.stream()
+                    .map(service::normalizeMetric)
+                    .collect(Collectors.toList());
+                service.saveBatch(normalizedMetrics);
+                total += normalizedMetrics.size();
+            } catch (Exception e) {
+                return Result.error("文件导入失败:" + e.getMessage());
+            }
+        }
+        return Result.OK("文件导入成功！数据行数：" + total);
     }
 }

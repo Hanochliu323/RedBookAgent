@@ -211,7 +211,7 @@ public class RedbookWorkflowServiceImpl implements IRedbookWorkflowService {
         draft.setAuditStatus(RedbookStatusConstant.AUDIT_PENDING);
         draft.setAuditOpinion("待人工审核，重点确认标题力度与结尾转化动作。");
         draft.setStatus(RedbookStatusConstant.DRAFT_PENDING_REVIEW);
-        noteDraftService.saveOrUpdate(draft);
+        noteDraftService.saveOrUpdateDraft(draft, "ai_generate", "AI 生成草稿");
 
         analysis.setStatus(RedbookStatusConstant.ANALYSIS_ADOPTED);
         hotspotAnalysisService.updateById(analysis);
@@ -226,6 +226,10 @@ public class RedbookWorkflowServiceImpl implements IRedbookWorkflowService {
         RbNoteDraft draft = noteDraftService.getById(draftId);
         if (draft == null) {
             throw new IllegalArgumentException("未找到对应草稿");
+        }
+        if (!RedbookStatusConstant.AUDIT_APPROVED.equals(draft.getAuditStatus())
+            || !RedbookStatusConstant.DRAFT_PENDING_PUBLISH.equals(draft.getStatus())) {
+            throw new IllegalArgumentException("草稿需先审核通过后才能加入发布计划");
         }
 
         RbPublishPlan publishPlan = publishPlanService.lambdaQuery()
